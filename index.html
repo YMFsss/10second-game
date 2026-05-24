@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>10 Second Challenge</title>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- GSAP for animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#10B981',
+                        accent: '#F59E0B',
+                        danger: '#EF4444',
+                        dark: '#1E293B',
+                        light: '#F8FAFC'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['Roboto Mono', 'monospace']
+                    },
+                    animation: {
+                        'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .text-shadow {
+                text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+            }
+            .text-shadow-lg {
+                text-shadow: 0 0 20px rgba(59, 130, 246, 0.8);
+            }
+            .btn-shadow {
+                box-shadow: 0 4px 0 0 theme('colors.primary.700');
+            }
+            .btn-shadow-active {
+                box-shadow: 0 2px 0 0 theme('colors.primary.700');
+            }
+            .glass {
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            }
+            .timer-circle {
+                stroke-dasharray: 283;
+                stroke-dashoffset: 283;
+                transition: stroke-dashoffset 1s linear;
+            }
+        }
+    </style>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;600&display=swap');
+        
+        body {
+            background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .timer-display {
+            font-family: 'Roboto Mono', monospace;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+        
+        @keyframes pulse-ring {
+            0% {
+                transform: rotate(-90deg) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: rotate(-90deg) scale(1.5);
+                opacity: 0;
+            }
+        }
+        
+        .pulse-animation {
+            animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+        }
+        
+        .button-3d {
+            transition: all 0.1s ease;
+        }
+        
+        .button-3d:active {
+            transform: translateY(4px);
+        }
+        
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #f00;
+            border-radius: 50%;
+            animation: confetti-fall 3s ease-in-out forwards;
+        }
+        
+        @keyframes confetti-fall {
+            0% {
+                transform: translateY(-10vh) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body class="text-light">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold mb-2 text-shadow-lg">
+                <span class="text-primary">10</span> Second Challenge
+            </h1>
+            <p class="text-lg text-gray-300">Try to stop the timer as close to <span class="font-mono font-bold text-secondary">10.000</span> seconds as possible!</p>
+        </header>
+        
+        <!-- Main Game Area -->
+        <main class="glass rounded-2xl p-6 md:p-8 shadow-xl mb-8 relative overflow-hidden">
+            <!-- Progress Ring Background -->
+            <div class="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
+                <svg class="progress-ring w-64 h-64 md:w-80 md:h-80" viewBox="0 0 100 100">
+                    <circle class="text-gray-600" stroke-width="4" stroke="currentColor" fill="transparent" r="45" cx="50" cy="50" />
+                    <circle id="progress-circle" class="timer-circle text-primary" stroke-width="4" stroke="currentColor" fill="transparent" r="45" cx="50" cy="50" />
+                    <circle id="pulse-circle" class="text-primary opacity-30" stroke-width="2" stroke="currentColor" fill="transparent" r="45" cx="50" cy="50" />
+                </svg>
+            </div>
+            
+            <!-- Timer Display -->
+            <div class="text-center mb-8 relative z-10">
+                <div id="timer-display" class="timer-display text-6xl md:text-8xl font-bold mb-4 text-shadow">
+                    0.000
+                </div>
+                <div id="status-message" class="text-xl text-gray-300 mb-2">
+                    Ready to start?
+                </div>
+                <div id="accuracy-message" class="text-lg font-medium hidden"></div>
+            </div>
+            
+            <!-- Control Buttons -->
+            <div class="flex justify-center gap-4 md:gap-8">
+                <button id="start-btn" class="button-3d bg-primary hover:bg-blue-600 text-white text-xl md:text-2xl font-bold py-4 px-8 rounded-xl btn-shadow flex items-center justify-center gap-2">
+                    <i class="fa fa-play-circle-o"></i>
+                    <span>Start</span>
+                </button>
+                <button id="stop-btn" class="button-3d bg-danger hover:bg-red-600 text-white text-xl md:text-2xl font-bold py-4 px-8 rounded-xl btn-shadow flex items-center justify-center gap-2 opacity-50 cursor-not-allowed" disabled>
+                    <i class="fa fa-stop-circle-o"></i>
+                    <span>Stop</span>
+                </button>
+                <button id="reset-btn" class="button-3d bg-gray-600 hover:bg-gray-700 text-white text-xl md:text-2xl font-bold py-4 px-8 rounded-xl btn-shadow flex items-center justify-center gap-2">
+                    <i class="fa fa-refresh"></i>
+                    <span>Reset</span>
+                </button>
+            </div>
+        </main>
+        
+        <!-- Results Area -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <!-- Best Score -->
+            <div class="glass rounded-xl p-6 shadow-lg">
+                <h2 class="text-xl font-semibold mb-4 flex items-center">
+                    <i class="fa fa-trophy text-accent mr-2"></i>
+                    Best Score
+                </h2>
+                <div id="best-score" class="font-mono text-3xl font-bold text-secondary">
+                    ---.---
+                </div>
+                <div id="best-difference" class="text-sm text-gray-400 mt-1">
+                    Difference: ---.---s
+                </div>
+            </div>
+            
+            <!-- Current Session -->
+            <div class="glass rounded-xl p-6 shadow-lg">
+                <h2 class="text-xl font-semibold mb-4 flex items-center">
+                    <i class="fa fa-clock-o text-primary mr-2"></i>
+                    Current Session
+                </h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <div class="text-sm text-gray-400">Attempts</div>
+                        <div id="attempts-count" class="font-mono text-2xl font-bold">0</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-400">Average Difference</div>
+                        <div id="avg-difference" class="font-mono text-2xl font-bold">---.---</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- History Table -->
+        <section class="glass rounded-xl p-6 shadow-lg overflow-x-auto">
+            <h2 class="text-xl font-semibold mb-4 flex items-center">
+                <i class="fa fa-history text-gray-400 mr-2"></i>
+                Recent Attempts
+            </h2>
+            <table class="w-full min-w-[400px]">
+                <thead>
+                    <tr class="border-b border-gray-700">
+                        <th class="py-2 px-4 text-left text-sm font-medium text-gray-400 uppercase tracking-wider">Attempt</th>
+                        <th class="py-2 px-4 text-left text-sm font-medium text-gray-400 uppercase tracking-wider">Time</th>
+                        <th class="py-2 px-4 text-left text-sm font-medium text-gray-400 uppercase tracking-wider">Difference</th>
+                        <th class="py-2 px-4 text-left text-sm font-medium text-gray-400 uppercase tracking-wider">Accuracy</th>
+                    </tr>
+                </thead>
+                <tbody id="history-table">
+                    <tr>
+                        <td colspan="4" class="py-4 text-center text-gray-400">No attempts yet. Click "Start" to begin!</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </div>
+    
+    <!-- Footer -->
+    <footer class="text-center text-gray-500 text-sm mt-8">
+        <p>Made with <span class="text-danger">❤</span> for the 10 Second Challenge</p>
+    </footer>
+    
+    <!-- Confetti Container -->
+    <div id="confetti-container" class="fixed inset-0 pointer-events-none"></div>
+    
+    <script>
+        // DOM Elements
+        const startBtn = document.getElementById('start-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const timerDisplay = document.getElementById('timer-display');
+        const statusMessage = document.getElementById('status-message');
+        const accuracyMessage = document.getElementById('accuracy-message');
+        const bestScoreElement = document.getElementById('best-score');
+        const bestDifferenceElement = document.getElementById('best-difference');
+        const attemptsCountElement = document.getElementById('attempts-count');
+        const avgDifferenceElement = document.getElementById('avg-difference');
+        const historyTable = document.getElementById('history-table');
+        const progressCircle = document.getElementById('progress-circle');
+        const pulseCircle = document.getElementById('pulse-circle');
+        const confettiContainer = document.getElementById('confetti-container');
+        
+        // Game State
+        let startTime = 0;
+        let elapsedTime = 0;
+        let timerInterval = null;
+        let isRunning = false;
+        let attempts = 0;
+        let totalDifference = 0;
+        let bestScore = null;
+        let bestDifference = Infinity;
+        let history = [];
+        
+        // Target time in milliseconds
+        const TARGET_TIME = 10000;
+        
+        // Initialize the app
+        function init() {
+            // Load saved data from localStorage
+            loadGameData();
+            
+            // Update UI with loaded data
+            updateUI();
+            
+            // Add event listeners
+            startBtn.addEventListener('click', startTimer);
+            stopBtn.addEventListener('click', stopTimer);
+            resetBtn.addEventListener('click', resetGame);
+            
+            // Add keyboard shortcuts
+            document.addEventListener('keydown', handleKeyPress);
+            
+            // Initialize pulse animation
+            initPulseAnimation();
+        }
+        
+        // Start the timer
+        function startTimer() {
+            if (isRunning) return;
+            
+            isRunning = true;
+            startTime = Date.now();
+            
+            // Update UI
+            startBtn.disabled = true;
+            startBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            stopBtn.disabled = false;
+            stopBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            statusMessage.textContent = 'Timer running...';
+            accuracyMessage.classList.add('hidden');
+            
+            // Start the timer interval
+            timerInterval = setInterval(updateTimer, 10);
+            
+            // Start progress animation
+            startProgressAnimation();
+        }
+        
+        // Update timer display
+        function updateTimer() {
+            elapsedTime = Date.now() - startTime;
+            const seconds = (elapsedTime / 1000).toFixed(3);
+            timerDisplay.textContent = seconds;
+            
+            // Update progress circle
+            updateProgressCircle(elapsedTime);
+            
+            // Change color as we approach target time
+            updateTimerColor(elapsedTime);
+        }
+        
+        // Stop the timer
+        function stopTimer() {
+            if (!isRunning) return;
+            
+            isRunning = false;
+            clearInterval(timerInterval);
+            
+            // Calculate results
+            const finalTime = elapsedTime;
+            const seconds = (finalTime / 1000).toFixed(3);
+            const difference = Math.abs(finalTime - TARGET_TIME);
+            const differenceSeconds = (difference / 1000).toFixed(3);
+            
+            // Update game state
+            attempts++;
+            totalDifference += difference;
+            history.push({
+                attempt: attempts,
+                time: seconds,
+                difference: differenceSeconds,
+                accuracy: getAccuracyRating(difference)
+            });
+            
+            // Check for new best score
+            if (difference < bestDifference) {
+                bestDifference = difference;
+                bestScore = seconds;
+                celebrateNewRecord();
+            }
+            
+            // Save game data
+            saveGameData();
+            
+            // Update UI
+            updateUI();
+            
+            // Show results
+            showResults(seconds, differenceSeconds);
+        }
+        
+        // Reset the game
+        function resetGame() {
+            // Stop timer if running
+            if (isRunning) {
+                clearInterval(timerInterval);
+                isRunning = false;
+            }
+            
+            // Reset game state
+            elapsedTime = 0;
+            
+            // Reset UI
+            timerDisplay.textContent = '0.000';
+            statusMessage.textContent = 'Ready to start?';
+            accuracyMessage.classList.add('hidden');
+            timerDisplay.classList.remove('text-danger', 'text-secondary', 'text-accent');
+            
+            startBtn.disabled = false;
+            startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            stopBtn.disabled = true;
+            stopBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            
+            // Reset progress circle
+            resetProgressCircle();
+        }
+        
+        // Reset all game data
+        function resetAllData() {
+            if (confirm('Are you sure you want to reset all game data? This action cannot be undone.')) {
+                // Reset game state
+                attempts = 0;
+                totalDifference = 0;
+                bestScore = null;
+                bestDifference = Infinity;
+                history = [];
+                
+                // Save empty data
+                saveGameData();
+                
+                // Update UI
+                updateUI();
+                
+                // Reset current game
+                resetGame();
+            }
+        }
+        
+        // Show results after stopping the timer
+        function showResults(time, difference) {
+            const accuracy = getAccuracyRating(difference * 1000);
+            
+            statusMessage.textContent = `Your time: ${time}s`;
+            accuracyMessage.textContent = accuracy.message;
+            accuracyMessage.className = `text-lg font-medium ${accuracy.class}`;
+            accuracyMessage.classList.remove('hidden');
+        }
+        
+        // Get accuracy rating based on difference
+        function getAccuracyRating(difference) {
+            if (difference < 10) {
+                return {
+                    message: 'Perfect! You\'re a time master! 🎯',
+                    class: 'text-accent'
+                };
+            } else if (difference < 50) {
+                return {
+                    message: 'Excellent! Almost perfect! 🏆',
+                    class: 'text-secondary'
+                };
+            } else if (difference < 100) {
+                return {
+                    message: 'Great job! Very close! 👍',
+                    class: 'text-green-400'
+                };
+            } else if (difference < 250) {
+                return {
+                    message: 'Good try! Getting closer! 👏',
+                    class: 'text-blue-400'
+                };
+            } else if (difference < 500) {
+                return {
+                    message: 'Not bad! Keep practicing! 💪',
+                    class: 'text-purple-400'
+                };
+            } else {
+                return {
+                    message: 'Keep trying! You\'ll get it! 🎯',
+                    class: 'text-gray-400'
+                };
+            }
+        }
+        
+        // Update progress circle
+        function updateProgressCircle(time) {
+            const percentage = Math.min(time / TARGET_TIME, 2) * 100;
+            const circumference = 2 * Math.PI * 45;
+            const offset = circumference - (percentage / 100) * circumference;
+            progressCircle.style.strokeDashoffset = offset;
+        }
+        
+        // Reset progress circle
+        function resetProgressCircle() {
+            progressCircle.style.strokeDashoffset = 283;
+            progressCircle.classList.remove('text-danger', 'text-secondary', 'text-accent');
+        }
+        
+        // Start progress animation
+        function startProgressAnimation() {
+            gsap.fromTo(progressCircle, 
+                { strokeDashoffset: 283 },
+                { 
+                    strokeDashoffset: 0, 
+                    duration: 10, 
+                    ease: "linear",
+                    onComplete: function() {
+                        // Continue animation beyond target time
+                        gsap.to(progressCircle, {
+                            strokeDashoffset: -283,
+                            duration: 10,
+                            ease: "linear"
+                        });
+                    }
+                }
+            );
+        }
+        
+        // Update timer color based on proximity to target
+        function updateTimerColor(time) {
+            const difference = Math.abs(time - TARGET_TIME);
+            
+            // Reset classes
+            timerDisplay.classList.remove('text-danger', 'text-secondary', 'text-accent');
+            
+            if (difference < 500) {
+                // Very close to target
+                timerDisplay.classList.add('text-secondary');
+            } else if (time > TARGET_TIME + 1000) {
+                // Well over target
+                timerDisplay.classList.add('text-danger');
+            }
+        }
+        
+        // Initialize pulse animation
+        function initPulseAnimation() {
+            gsap.to(pulseCircle, {
+                attr: { r: 50 },
+                opacity: 0,
+                duration: 2,
+                repeat: -1,
+                ease: "power1.inOut",
+                onRepeat: function() {
+                    gsap.set(pulseCircle, {
+                        attr: { r: 45 },
+                        opacity: 0.3
+                    });
+                }
+            });
+        }
+        
+        // Celebrate new record with confetti
+        function celebrateNewRecord() {
+            createConfetti();
+            
+            // Animate the best score
+            gsap.fromTo(bestScoreElement,
+                { scale: 1.5, color: '#F59E0B' },
+                { scale: 1, color: '#10B981', duration: 1 }
+            );
+        }
+        
+        // Create confetti effect
+        function createConfetti() {
+            confettiContainer.innerHTML = '';
+            
+            const colors = ['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6'];
+            
+            for (let i = 0; i < 100; i++) {
+                const confetti = document.createElement('div');
+                confetti.classList.add('confetti');
+                
+                // Random properties
+                confetti.style.left = `${Math.random() * 100}vw`;
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.width = `${Math.random() * 10 + 5}px`;
+                confetti.style.height = `${Math.random() * 10 + 5}px`;
+                confetti.style.animationDuration = `${Math.random() * 3 + 2}s`;
+                confetti.style.animationDelay = `${Math.random() * 2}s`;
+                
+                confettiContainer.appendChild(confetti);
+            }
+            
+            // Clear confetti after animation
+            setTimeout(() => {
+                confettiContainer.innerHTML = '';
+            }, 5000);
+        }
+        
+        // Handle keyboard shortcuts
+        function handleKeyPress(e) {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (isRunning) {
+                    stopTimer();
+                } else {
+                    startTimer();
+                }
+            } else if (e.code === 'KeyR') {
+                resetGame();
+            }
+        }
+        
+        // Update UI with current game state
+        function updateUI() {
+            // Update best score
+            if (bestScore) {
+                bestScoreElement.textContent = bestScore;
+                bestDifferenceElement.textContent = `Difference: ${(bestDifference / 1000).toFixed(3)}s`;
+            } else {
+                bestScoreElement.textContent = '---.---';
+                bestDifferenceElement.textContent = 'Difference: ---.---s';
+            }
+            
+            // Update attempts and average
+            attemptsCountElement.textContent = attempts;
+            const avgDiff = attempts > 0 ? (totalDifference / attempts / 1000).toFixed(3) : '---.---';
+            avgDifferenceElement.textContent = avgDiff;
+            
+            // Update history table
+            updateHistoryTable();
+        }
+        
+        // Update history table
+        function updateHistoryTable() {
+            if (history.length === 0) {
+                historyTable.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="py-4 text-center text-gray-400">No attempts yet. Click "Start" to begin!</td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            // Sort history by difference (ascending)
+            const sortedHistory = [...history].sort((a, b) => parseFloat(a.difference) - parseFloat(b.difference));
+            
+            // Generate table rows
+            let tableHTML = '';
+            sortedHistory.forEach((record, index) => {
+                const isHighlighted = record.time === bestScore;
+                const rowClass = isHighlighted ? 'bg-primary bg-opacity-20' : '';
+                
+                tableHTML += `
+                    <tr class="${rowClass} border-b border-gray-800 hover:bg-gray-800 transition-colors">
+                        <td class="py-3 px-4">${record.attempt}</td>
+                        <td class="py-3 px-4 font-mono ${isHighlighted ? 'text-secondary font-bold' : ''}">${record.time}</td>
+                        <td class="py-3 px-4 font-mono ${isHighlighted ? 'text-secondary font-bold' : ''}">${record.difference}</td>
+                        <td class="py-3 px-4">${record.accuracy.message}</td>
+                    </tr>
+                `;
+            });
+            
+            historyTable.innerHTML = tableHTML;
+        }
+        
+        // Save game data to localStorage
+        function saveGameData() {
+            const gameData = {
+                attempts,
+                totalDifference,
+                bestScore,
+                bestDifference,
+                history
+            };
+            
+            localStorage.setItem('10SecondChallenge', JSON.stringify(gameData));
+        }
+        
+        // Load game data from localStorage
+        function loadGameData() {
+            const savedData = localStorage.getItem('10SecondChallenge');
+            
+            if (savedData) {
+                const gameData = JSON.parse(savedData);
+                
+                attempts = gameData.attempts || 0;
+                totalDifference = gameData.totalDifference || 0;
+                bestScore = gameData.bestScore || null;
+                bestDifference = gameData.bestDifference || Infinity;
+                history = gameData.history || [];
+            }
+        }
+        
+        // Add reset all data button to reset button context menu
+        resetBtn.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            resetAllData();
+        });
+        
+        // Initialize the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
